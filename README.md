@@ -1,6 +1,6 @@
 # Completion certificates for property teams
 
-We gate the PDF on real completion: maintenance resolved, tenant docs verified, inspection reminders acknowledged. Then the service makes one plain REST call to Infrai (one api for all capabilities), so the same `INFRAI_API_KEY` pattern stays small without a service-specific SDK.
+The decision comes first: a participant receives a PDF only after every maintenance request is resolved, every tenant document is verified, and every inspection reminder is acknowledged. The service then sends one plain REST request to Infrai, so the same `INFRAI_API_KEY` pattern can stay small without installing a service-specific SDK.
 
 ## Run the lesson-sized example
 
@@ -9,7 +9,7 @@ npm install
 npm run example
 ```
 
-This snippet pushes two property-management participants through the workflow. `pm-104` has cleared all three record groups and lands under `generated`; `pm-105` still has an open maintenance request and appears under `pending` with the reason. A local preview generator renders the decision without creating a remote document, which is handy for compliance reviews.
+The example submits two property-management participants to the workflow. `pm-104` has cleared all three record groups and appears under `generated`; `pm-105` still has an open maintenance request and appears under `pending` with the reason. It uses a local preview generator, which makes the decision visible without creating a remote document.
 
 Verify that exact rule with:
 
@@ -18,7 +18,7 @@ npm test
 npm run typecheck
 ```
 
-The focused test flips all three record groups from complete to incomplete and asserts the ordered reasons, instead of testing that a function merely exists.
+The focused test changes all three record groups from complete to incomplete and checks the ordered reasons, rather than testing that a function merely exists.
 
 ## Generate the PDFs
 
@@ -58,7 +58,7 @@ Expected shape:
 }
 ```
 
-`document` contains the successful Infrai response data for the generated PDF. The reusable generator explicitly posts Markdown, checks the response envelope before interpreting HTTP status (a deliverability habit), preserves the batch-and-participant idempotency key across rate-limit retries, and honors `Retry-After` when it is present.
+`document` contains the successful Infrai response data for the generated PDF. The reusable generator explicitly posts Markdown, checks the response envelope before interpreting HTTP status, preserves the batch-and-participant idempotency key across rate-limit retries, and honors `Retry-After` when it is present.
 
 ## The one recordkeeping gotcha
 
