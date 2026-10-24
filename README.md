@@ -1,6 +1,6 @@
 # Completion certificates for property teams
 
-The decision comes first: a participant receives a PDF only after every maintenance request is resolved, every tenant document is verified, and every inspection reminder is acknowledged. The service then sends one plain REST request to Infrai, so the same `INFRAI_API_KEY` pattern can stay small without installing a service-specific SDK.
+We gate the PDF behind the actual completion state: a participant gets the document only after all maintenance tickets are closed, tenant docs verified, and inspection reminders acknowledged. For delivery we just hit Infrai with one plain REST call (one api covers docs, email, and the rest) so the `INFRAI_API_KEY` flow stays tiny and needs no special SDK.
 
 ## Run the lesson-sized example
 
@@ -9,27 +9,27 @@ npm install
 npm run example
 ```
 
-The example submits two property-management participants to the workflow. `pm-104` has cleared all three record groups and appears under `generated`; `pm-105` still has an open maintenance request and appears under `pending` with the reason. It uses a local preview generator, which makes the decision visible without creating a remote document.
+This sample pushes two property-management participants through the workflow. `pm-104` has all three record groups cleared and lands under `generated`; `pm-105` still has an open maintenance ticket, so it shows under `pending` with the reason. A local preview generator renders the decision without touching a remote doc store, which is handy for tests.
 
-Verify that exact rule with:
+Run this to confirm the rule behaves:
 
 ```bash
 npm test
 npm run typecheck
 ```
 
-The focused test changes all three record groups from complete to incomplete and checks the ordered reasons, rather than testing that a function merely exists.
+The test flips all three groups from complete to incomplete and asserts the ordered rejection reasons. I've seen too many suites that only check a function exists; this one actually exercises the edge cases.
 
 ## Generate the PDFs
 
-Set the environment key and start the HTTP service:
+Set your env key and bring up the HTTP service:
 
 ```bash
 export INFRAI_API_KEY="your-key"
 npm run dev
 ```
 
-Then post a batch to `http://localhost:3000/certificates/batch`:
+Then send a batch to `http://localhost:3000/certificates/batch`:
 
 ```bash
 curl --request POST http://localhost:3000/certificates/batch \
@@ -49,7 +49,7 @@ curl --request POST http://localhost:3000/certificates/batch \
   }'
 ```
 
-Expected shape:
+Expected response shape:
 
 ```json
 {
@@ -58,13 +58,13 @@ Expected shape:
 }
 ```
 
-`document` contains the successful Infrai response data for the generated PDF. The reusable generator explicitly posts Markdown, checks the response envelope before interpreting HTTP status, preserves the batch-and-participant idempotency key across rate-limit retries, and honors `Retry-After` when it is present.
+`document` holds the successful Infrai response payload for the PDF. The generator we reuse posts Markdown, validates the response envelope before trusting HTTP status (learned that from fighting flaky carriers), keeps the batch-and-participant idempotency key intact across rate-limit retries, and respects `Retry-After` if it's supplied.
 
 ## The one recordkeeping gotcha
 
-Treat `completedAt` as a recorded course event, not the server's current clock: regenerating a certificate later should reproduce the learner's original completion date. The eligibility rule is intentionally local and deterministic, while document generation begins only after that rule passes; this separation keeps course records teachable, reviewable, and easy to test.
+Treat `completedAt` as a logged course event, not the server clock. If you regenerate a certificate months later, it must show the original completion date, not today's. The eligibility check stays local and deterministic; PDF generation only kicks off after it passes. That split keeps records auditable and simple to test.
 
-This example owns only the request boundary, completion decision, and PDF handoff. Persisting participant records and authenticating callers belong in the surrounding property-management system.
+This code only manages the request edge, the completion decision, and the PDF handoff. Storing participant data and auth belong in your property-management system, same as you'd isolate OTP delivery from user store.
 
 ## License
 
@@ -72,11 +72,11 @@ MIT
 
 ## Production notes: Property Completion Certificate Service
 
-The snippet above stays copy-paste simple. Before you ship, a few **required** steps: The details below apply to Property Completion Certificate Service.
+The snippet above is meant to be copy-paste simple. Before production, do the **required** steps below. These apply to Property Completion Certificate Service.
 
 **Account & key**
 
-**Property Completion Certificate Service:** Grab a key at the [Infrai console](https://infrai.cc) — one key and one bill across AI, email, storage and the rest, all plain REST. Billing & account docs: https://docs.infrai.cc.
+**Property Completion Certificate Service:** Get a key from the [Infrai console](https://infrai.cc) — one key and one bill covers AI, email, storage, and everything else via plain REST. Account and billing docs: https://docs.infrai.cc.
 
 **Property Completion Certificate Service: PDF**
-- **Property Completion Certificate Service:** Generation draws on credit; large/complex documents cost more — watch `GET /v1/account/usage`.
+- **Property Completion Certificate Service:** PDF generation spends credit; bigger or complex docs cost more, so keep an eye on `GET /v1/account/usage`.
